@@ -27,7 +27,7 @@ def api_data():
     return jsonify(
         time=now.strftime("%H:%M"),
         date=get_serbian_date(),
-        temp="Temperatura na trenutnoj lokaciji: " + get_weather(),
+        temp="Temperatura: " + get_weather(),
         loc="Trenutna lokacija: " + MOJA_ADRESA
     )
 
@@ -96,7 +96,6 @@ def index():
     <body>
         <div class="header">
             <div id="d">""" + init_date + """</div>
-            <div class="perm">Korišćenje lokacije: DA<br>Korišćenje kamere: NE<br>Internet konekcija: DA</div>
         </div>
 
         <div id="t" class="clock">""" + init_time + """</div>
@@ -121,7 +120,7 @@ def index():
                 };
                 xhr.send();
             }
-            setInterval(update, 10000);
+            setInterval(update, 7000);
             update();
         </script>
     </body>
