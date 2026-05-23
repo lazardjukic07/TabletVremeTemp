@@ -38,7 +38,7 @@ def get_serbian_date():
 def get_greeting():
     hour = datetime.datetime.now().hour
 
-    if 1 <= hour < 12:
+    if 0 <= hour < 12:
         return "Dobro jutro."
     elif 12 <= hour < 18:
         return "Dobar dan."
@@ -49,10 +49,10 @@ def get_greeting():
 
 def get_weather():
     try:
-        r = requests.get("https://wttr.in/Belgrade?format=%t", timeout=3)
-        return re.sub(r'[^0-9°C-]', '', r.text) if r.status_code == 200 else "--°C"
+        r = requests.get("https://wttr.in/Belgrade?format=%t %c", timeout=3)
+        return r.text.strip().replace("+", "") if r.status_code == 200 else "--°C"
     except:
-        return "--°C"
+        return "🌡️ --°C"
 
 @app.route('/api/data')
 def api_data():
@@ -106,7 +106,7 @@ def index():
 
             .greeting-right {
                 text-align:right;
-                color:#ffffff;
+                color:#4d83f0;
                 font-size:32px;
             }
 
