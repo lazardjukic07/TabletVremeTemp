@@ -27,7 +27,7 @@ def api_data():
     return jsonify(
         time=now.strftime("%H:%M"),
         date=get_serbian_date(),
-        temp="Temperatura za Beograd: " + get_weather(),
+        temp="Temperatura na trenutnoj lokaciji: " + get_weather(),
         loc="Trenutna lokacija: " + MOJA_ADRESA
     )
 
@@ -63,7 +63,7 @@ def index():
                 font-size:22px; 
             }
             #d {
-                font-size: 28px;
+                font-size: 30px;
             }
             .perm { 
                 text-align:right; 
