@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify
 import datetime
 import requests
 import re
@@ -10,9 +10,42 @@ MOJA_ADRESA = "Petra Konjovića 12D, 11090 Beograd (Rakovica), Centralna Srbija"
 
 def get_serbian_date():
     now = datetime.datetime.now()
-    dani = {"Monday": "Ponedeljak", "Tuesday": "Utorak", "Wednesday": "Sreda", "Thursday": "Četvrtak", "Friday": "Petak", "Saturday": "Subota", "Sunday": "Nedelja"}
-    meseci = {"January": "januar", "February": "februar", "March": "mart", "April": "april", "May": "maj", "June": "jun", "July": "jul", "August": "avgust", "September": "septembar", "October": "oktobar", "November": "novembar", "December": "decembar"}
+    dani = {
+        "Monday": "Ponedeljak",
+        "Tuesday": "Utorak",
+        "Wednesday": "Sreda",
+        "Thursday": "Četvrtak",
+        "Friday": "Petak",
+        "Saturday": "Subota",
+        "Sunday": "Nedelja"
+    }
+    meseci = {
+        "January": "januar",
+        "February": "februar",
+        "March": "mart",
+        "April": "april",
+        "May": "maj",
+        "June": "jun",
+        "July": "jul",
+        "August": "avgust",
+        "September": "septembar",
+        "October": "oktobar",
+        "November": "novembar",
+        "December": "decembar"
+    }
     return f"{dani.get(now.strftime('%A'), '')}, {now.strftime('%d')}. {meseci.get(now.strftime('%B'), '')} {now.strftime('%Y')}."
+
+def get_greeting():
+    hour = datetime.datetime.now().hour
+
+    if 5 <= hour < 12:
+        return "Dobro jutro"
+    elif 12 <= hour < 18:
+        return "Dobar dan"
+    elif 18 <= hour < 23:
+        return "Dobro veče"
+    else:
+        return "Laku noć"
 
 def get_weather():
     try:
@@ -27,6 +60,7 @@ def api_data():
     return jsonify(
         time=now.strftime("%H:%M"),
         date=get_serbian_date(),
+        greeting=get_greeting(),
         temp="Temperatura: " + get_weather(),
         loc="Trenutna lokacija: " + MOJA_ADRESA
     )
@@ -36,6 +70,7 @@ def index():
     now = datetime.datetime.now()
     init_time = now.strftime("%H:%M")
     init_date = get_serbian_date()
+    init_greeting = get_greeting()
     
     html = """
     <!DOCTYPE html>
@@ -53,6 +88,7 @@ def index():
                 overflow:hidden; 
                 position: relative;
             }
+
             .header { 
                 position: absolute;
                 top: 40px;
@@ -60,17 +96,22 @@ def index():
                 right: 40px;
                 display:flex; 
                 justify-content:space-between; 
+                align-items:flex-start;
                 font-size:22px; 
             }
+
             #d {
                 font-size: 30px;
             }
-            .perm { 
-                text-align:right; 
-                color:#f00; 
-                font-weight:bold; 
-                line-height: 1.2;
+
+            .greeting-right {
+                text-align:right;
+                color:#0f0;
+                font-size:32px;
+                font-weight:bold;
+                text-shadow: 0 0 12px #0f0;
             }
+
             /* FIKSIRAN SAT TAČNO U CENTRU */
             .clock { 
                 position: absolute;
@@ -82,6 +123,7 @@ def index():
                 color:#0f0; 
                 margin:0;
             }
+
             .footer { 
                 position: absolute;
                 bottom: 40px;
@@ -96,6 +138,7 @@ def index():
     <body>
         <div class="header">
             <div id="d">""" + init_date + """</div>
+            <div id="g" class="greeting-right">""" + init_greeting + """</div>
         </div>
 
         <div id="t" class="clock">""" + init_time + """</div>
@@ -113,6 +156,7 @@ def index():
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         var data = JSON.parse(xhr.responseText);
                         document.getElementById('d').innerHTML = data.date;
+                        document.getElementById('g').innerHTML = data.greeting;
                         document.getElementById('t').innerHTML = data.time;
                         document.getElementById('l').innerHTML = data.loc;
                         document.getElementById('w').innerHTML = data.temp;
@@ -120,6 +164,7 @@ def index():
                 };
                 xhr.send();
             }
+
             setInterval(update, 7000);
             update();
         </script>
