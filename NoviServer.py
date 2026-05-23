@@ -62,6 +62,9 @@ def index():
                 justify-content:space-between; 
                 font-size:22px; 
             }
+            #d {
+                font-size: 28px;
+            }
             .perm { 
                 text-align:right; 
                 color:#f00; 
