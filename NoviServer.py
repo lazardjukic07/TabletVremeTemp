@@ -38,14 +38,14 @@ def get_serbian_date():
 def get_greeting():
     hour = datetime.datetime.now().hour
 
-    if 5 <= hour < 12:
-        return "Dobro jutro"
+    if 1 <= hour < 12:
+        return "Dobro jutro."
     elif 12 <= hour < 18:
-        return "Dobar dan"
+        return "Dobar dan."
     elif 18 <= hour < 23:
-        return "Dobro veče"
+        return "Dobro veče."
     else:
-        return "Laku noć"
+        return "Laku noć."
 
 def get_weather():
     try:
