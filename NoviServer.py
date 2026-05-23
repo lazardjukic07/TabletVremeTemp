@@ -27,7 +27,7 @@ def api_data():
     return jsonify(
         time=now.strftime("%H:%M"),
         date=get_serbian_date(),
-        temp="Temperatura: " + get_weather(),
+        temp="Temperatura za Beograd: " + get_weather(),
         loc="Trenutna lokacija: " + MOJA_ADRESA
     )
 
