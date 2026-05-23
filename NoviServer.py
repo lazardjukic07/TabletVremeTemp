@@ -50,7 +50,7 @@ def get_greeting():
 def get_weather():
     try:
         r = requests.get("https://wttr.in/Belgrade?format=%t %c", timeout=3)
-        return r.text.strip().replace("+", "") if r.status_code == 200 else "--°C"
+        return re.sub(r'[^0-9°C-]', '', r.text) if r.status_code == 200 else "--°C"
     except:
         return "🌡️ --°C"
 
