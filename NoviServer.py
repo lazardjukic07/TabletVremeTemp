@@ -101,15 +101,13 @@ def index():
             }
 
             #d {
-                font-size: 30px;
+                font-size: 32px;
             }
 
             .greeting-right {
                 text-align:right;
-                color:#0f0;
+                color:#ffffff;
                 font-size:32px;
-                font-weight:bold;
-                text-shadow: 0 0 12px #0f0;
             }
 
             /* FIKSIRAN SAT TAČNO U CENTRU */
