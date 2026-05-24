@@ -106,7 +106,7 @@ def index():
 
             .greeting-right {
                 text-align:right;
-                color:#4d83f0;
+                color:#ff0303;
                 font-size:32px;
             }
 
