@@ -29,16 +29,16 @@ ANNOUNCEMENT_BASE_DATA = {
     "s": "1",
 }
 
-# Ovde menjaš stajalište za Beograd Plus prozor
-BUS_STATION_ID = "20867"
+# Stajališta koja se smenjuju u Beograd Plus prozoru
+BUS_STATION_IDS = ["20545", "20939", "22365", "22910"]
 
 STATIONS = {
     "20867": "Kanarevo brdo (867)",
-    "20939": "OŠ Đura Jakšić",
-    "22365": "Miljakovac /Pijaca/",
+    "20939": "OŠ Đura Jakšić (939)",
+    "22365": "Miljakovac /Pijaca/ (2365)",
     "20040": "Vareška",
     "22909": "Vareška",
-    "22910": "Vareška",
+    "22910": "Vareška (2910)",
 }
 
 current_message = {
@@ -47,12 +47,7 @@ current_message = {
     "received": ""
 }
 
-bus_cache = {
-    "time": 0,
-    "data": [],
-    "station": "",
-    "error": ""
-}
+bus_cache = {}
 
 air_cache = {
     "time": 0,
@@ -215,9 +210,7 @@ def build_bus_arrivals(api_raw_data):
 
         valid_vehicles.sort(key=lambda v: int(v.get("seconds_left", 99999)))
 
-        zamene = {
-
-        }
+        zamene = {}
 
         arrivals = []
 
@@ -273,31 +266,39 @@ def api_data():
 def api_arrivals():
     global bus_cache
 
-    now = time.time()
-    station_name = STATIONS.get(BUS_STATION_ID, BUS_STATION_ID)
+    station_uid = request.args.get("station", BUS_STATION_IDS[0])
 
-    # Keš 15 sekundi da ne smara API baš stalno
-    if now - bus_cache["time"] < 15:
+    if station_uid not in BUS_STATION_IDS:
+        station_uid = BUS_STATION_IDS[0]
+
+    now = time.time()
+    station_name = STATIONS.get(station_uid, station_uid)
+
+    cached = bus_cache.get(station_uid)
+
+    # Keš 15 sekundi po stajalištu
+    if cached and now - cached["time"] < 15:
         return jsonify(
             ok=True,
-            station=bus_cache["station"],
-            arrivals=bus_cache["data"],
-            error=bus_cache["error"]
+            station_id=station_uid,
+            station=cached["station"],
+            arrivals=cached["data"],
+            error=cached["error"]
         )
 
     try:
-        raw = fetch_bus_arrivals(BUS_STATION_ID)
+        raw = fetch_bus_arrivals(station_uid)
         arrivals = build_bus_arrivals(raw)
 
         if not arrivals:
-            bus_cache = {
+            bus_cache[station_uid] = {
                 "time": now,
                 "data": [],
                 "station": station_name,
                 "error": "Trenutno nema dolazaka."
             }
         else:
-            bus_cache = {
+            bus_cache[station_uid] = {
                 "time": now,
                 "data": arrivals,
                 "station": station_name,
@@ -306,13 +307,14 @@ def api_arrivals():
 
         return jsonify(
             ok=True,
-            station=bus_cache["station"],
-            arrivals=bus_cache["data"],
-            error=bus_cache["error"]
+            station_id=station_uid,
+            station=bus_cache[station_uid]["station"],
+            arrivals=bus_cache[station_uid]["data"],
+            error=bus_cache[station_uid]["error"]
         )
 
     except Exception as e:
-        bus_cache = {
+        bus_cache[station_uid] = {
             "time": now,
             "data": [],
             "station": station_name,
@@ -321,6 +323,7 @@ def api_arrivals():
 
         return jsonify(
             ok=False,
+            station_id=station_uid,
             station=station_name,
             arrivals=[],
             error="Greška pri učitavanju dolazaka."
@@ -565,7 +568,7 @@ def index():
 
             #msgTitle,
             #arrivalsTitle {
-                font-size: 42px;
+                font-size: 32px;
                 font-weight: bold;
                 color: white;
             }
@@ -671,7 +674,7 @@ def index():
             <button class="close-arrivals" onclick="closeArrivals()">×</button>
 
             <div class="arrivals-header">
-                <div id="arrivalsTitle">Dolasci autobusa</div>
+                <div id="arrivalsTitle">Dolazak vozila na stajalište</div>
                 <div id="arrivalsSubtitle">Učitavanje dolazaka...</div>
             </div>
 
@@ -700,6 +703,9 @@ def index():
             var soundEnabled = false;
             var lastMessageKey = "";
             var arrivalsTimer = null;
+
+            var stationPages = ["20867", "20939", "22365", "22910"];
+            var stationIndex = 0;
 
             function enableSound() {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -798,13 +804,18 @@ def index():
 
             function openArrivals() {
                 document.getElementById('arrivalsOverlay').style.display = 'flex';
+
+                stationIndex = 0;
                 loadArrivals();
 
                 if (arrivalsTimer) {
                     clearInterval(arrivalsTimer);
                 }
 
-                arrivalsTimer = setInterval(loadArrivals, 15000);
+                arrivalsTimer = setInterval(function() {
+                    stationIndex = (stationIndex + 1) % stationPages.length;
+                    loadArrivals();
+                }, 7000);
             }
 
             function closeArrivals() {
@@ -818,11 +829,15 @@ def index():
 
             function loadArrivals() {
                 var subtitle = document.getElementById('arrivalsSubtitle');
+                var title = document.getElementById('arrivalsTitle');
                 var list = document.getElementById('arrivalsList');
 
-                subtitle.textContent = "Učitavanje dolazaka...";
+                var stationId = stationPages[stationIndex];
 
-                fetch('/api/arrivals')
+                subtitle.textContent = "Učitavanje dolazaka...";
+                list.innerHTML = "";
+
+                fetch('/api/arrivals?station=' + stationId)
                     .then(response => response.json())
                     .then(data => {
                         list.innerHTML = "";
@@ -832,7 +847,8 @@ def index():
                         var mm = String(now.getMinutes()).padStart(2, '0');
                         var ss = String(now.getSeconds()).padStart(2, '0');
 
-                        subtitle.textContent = data.station + " | Ažurirano: " + hh + ":" + mm + ":" + ss;
+                        title.textContent = "Dolazak vozila na stajalište: " + data.station;
+                        subtitle.textContent = "Strana " + (stationIndex + 1) + "/" + stationPages.length + " | Ažurirano: " + hh + ":" + mm + ":" + ss;
 
                         if (!data.arrivals || data.arrivals.length === 0) {
                             var err = document.createElement('div');
@@ -860,6 +876,7 @@ def index():
                         });
                     })
                     .catch(() => {
+                        title.textContent = "Beograd Plus";
                         subtitle.textContent = "Greška";
                         list.innerHTML = "";
 
