@@ -144,7 +144,7 @@ def admin():
             <h1>Pošalji poruku na ekran</h1>
             <form method="POST">
                 <input name="message" placeholder="Unesi poruku..." autofocus>
-                <button type="submit">Prikaži 15 sekundi</button>
+                <button type="submit">Pošalji poruku na uređaje</button>
             </form>
         </div>
     </body>
