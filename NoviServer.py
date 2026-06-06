@@ -30,7 +30,7 @@ ANNOUNCEMENT_BASE_DATA = {
 }
 
 # Stajališta koja se smenjuju u Beograd Plus prozoru
-BUS_STATION_IDS = ["20867", "20939", "22365", "22910"]
+BUS_STATION_IDS = ["20867", "20868", "20939", "22365", "22910"]
 
 STATIONS = {
     "20867": "Kanarevo brdo (867)",
@@ -39,6 +39,7 @@ STATIONS = {
     "20040": "Vareška",
     "22909": "Vareška",
     "22910": "Vareška (2910)",
+    "20868": "Kanarevo brdo",
 }
 
 current_message = {
