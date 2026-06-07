@@ -39,7 +39,7 @@ STATIONS = {
     "20040": "Vareška",
     "22909": "Vareška",
     "22910": "Vareška (2910)",
-    "20868": "Kanarevo brdo",
+    "20868": "Kanarevo brdo (868)",
 }
 
 current_message = {
