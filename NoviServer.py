@@ -705,7 +705,7 @@ def index():
             var lastMessageKey = "";
             var arrivalsTimer = null;
 
-            var stationPages = ["20867", "20939", "22365", "22910"];
+            var stationPages = ["20867","20868", "20939", "22365", "22910"];
             var stationIndex = 0;
 
             function enableSound() {
