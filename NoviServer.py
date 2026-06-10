@@ -34,12 +34,12 @@ BUS_STATION_IDS = ["20867", "20868", "20939", "22365", "22910"]
 
 STATIONS = {
     "20867": "Kanarevo brdo (867)",
+    "20868": "Kanarevo brdo (868)",
     "20939": "OŠ Đura Jakšić (939)",
     "22365": "Miljakovac /Pijaca/ (2365)",
     "20040": "Vareška",
     "22909": "Vareška",
     "22910": "Vareška (2910)",
-    "20868": "Kanarevo brdo (868)",
 }
 
 current_message = {
@@ -237,7 +237,6 @@ def build_bus_arrivals(api_raw_data):
             except:
                 seconds = 0
 
-            # Isto kao na tvom displeju
             minutes = max(1, math.ceil(seconds / 60) - 1)
 
             arrivals.append({
@@ -277,7 +276,6 @@ def api_arrivals():
 
     cached = bus_cache.get(station_uid)
 
-    # Keš 15 sekundi po stajalištu
     if cached and now - cached["time"] < 15:
         return jsonify(
             ok=True,
@@ -329,6 +327,28 @@ def api_arrivals():
             arrivals=[],
             error="Greška pri učitavanju dolazaka."
         )
+
+# --- ZADARMA API INTEGRACIJA ---
+@app.route('/api/make-call', methods=['POST'])
+def make_call():
+    phone_number = request.json.get('phone', '')
+    # Čišćenje karaktera kako bi prošao čist broj telefona
+    clean_number = re.sub(r'[^0-9]', '', phone_number)
+    
+    if not clean_number:
+        return jsonify(ok=False, error="Nevažeći broj telefona.")
+
+    zadarma_url = f"https://cb.zadarma.com/4ae0ca0b47/?n={clean_number}"
+    
+    try:
+        # Šaljemo zahtev Zadarma API-ju
+        r = requests.get(zadarma_url, timeout=5)
+        if r.status_code == 200:
+            return jsonify(ok=True)
+        else:
+            return jsonify(ok=False, error=f"Zadarma vratio status {r.status_code}")
+    except Exception as e:
+        return jsonify(ok=False, error=str(e))
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -493,6 +513,12 @@ def index():
                 align-items: flex-start;
             }
 
+            .right-header {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* Promenjeno da se poravna uz levu ivicu teksta Dobar dan */
+            }
+
             #d {
                 font-size: 32px;
             }
@@ -511,9 +537,22 @@ def index():
             }
 
             .greeting-right {
-                text-align:right;
-                color:#ff0303;
-                font-size:32px;
+                text-align: left;
+                color: #ff0303;
+                font-size: 32px;
+            }
+
+            .contacts-btn {
+                margin-top: 8px;
+                font-size: 26px;
+                color: #ff8c00;
+                cursor: pointer;
+                font-weight: normal; /* Isključeno podebljanje */
+                user-select: none;
+            }
+
+            .contacts-btn:active {
+                transform: scale(0.97);
             }
 
             .clock { 
@@ -543,7 +582,8 @@ def index():
             }
 
             .message-overlay,
-            .arrivals-overlay {
+            .arrivals-overlay,
+            .contacts-overlay {
                 display: none;
                 position: fixed;
                 inset: 0;
@@ -559,7 +599,8 @@ def index():
             }
 
             .message-header,
-            .arrivals-header {
+            .arrivals-header,
+            .contacts-header {
                 position: absolute;
                 top: 35px;
                 left: 50px;
@@ -568,17 +609,33 @@ def index():
             }
 
             #msgTitle,
-            #arrivalsTitle {
+            #arrivalsTitle,
+            #contactsTitle {
                 font-size: 32px;
                 font-weight: bold;
                 color: white;
             }
 
+            /* Uklonjena blink animacija sa Poziv u toku */
+            .call-active-title {
+                font-size: 45px;
+                font-weight: bold;
+                color: #ff0303;
+            }
+
             #msgReceived,
-            #arrivalsSubtitle {
+            #arrivalsSubtitle,
+            #contactsSubtitle {
                 margin-top: 8px;
                 font-size: 24px;
                 color: #ccc;
+            }
+
+            #callStatus {
+                margin-top: 8px;
+                font-size: 26px;
+                color: #0f0; /* Zelena boja za status pozivanja/veze */
+                font-weight: bold;
             }
 
             #msgText {
@@ -592,7 +649,8 @@ def index():
             }
 
             .close-msg,
-            .close-arrivals {
+            .close-arrivals,
+            .close-contacts {
                 position: absolute;
                 top: 25px;
                 right: 35px;
@@ -604,12 +662,14 @@ def index():
                 z-index: 10000;
             }
 
-            .arrivals-box {
+            .arrivals-box,
+            .contacts-box {
                 width: min(900px, 92vw);
                 margin-top: 90px;
             }
 
-            .arrival-row {
+            .arrival-row,
+            .contact-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -622,13 +682,25 @@ def index():
                 text-align: left;
             }
 
-            .arrival-main {
+            .contact-row {
+                color: #ff8c00;
+                border-bottom: 1px solid rgba(255, 3, 3, 0.25);
+                cursor: pointer;
+            }
+
+            .contact-row:active {
+                background: rgba(255, 3, 3, 0.1);
+            }
+
+            .arrival-main,
+            .contact-name {
                 overflow: hidden;
                 white-space: nowrap;
                 text-overflow: ellipsis;
             }
 
-            .arrival-time {
+            .arrival-time,
+            .contact-phone {
                 min-width: 150px;
                 text-align: right;
                 white-space: nowrap;
@@ -653,6 +725,46 @@ def index():
                 color: #000;
                 font-weight: bold;
                 cursor: pointer;
+            }
+
+            .call-center-box {
+                margin-top: 40px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .call-name {
+                font-size: 75px;
+                font-weight: bold;
+                color: white;
+                margin-bottom: 10px;
+            }
+
+            .call-number {
+                font-size: 45px;
+                color: #ccc;
+            }
+
+            .end-call-btn {
+                position: absolute;
+                bottom: 60px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 32px;
+                font-weight: bold;
+                background: #ff0303;
+                color: white;
+                border: none;
+                padding: 20px 60px;
+                border-radius: 40px;
+                cursor: pointer;
+                box-shadow: 0 0 20px rgba(255, 3, 3, 0.4);
+            }
+
+            .end-call-btn:active {
+                transform: translateX(-50%) scale(0.95);
             }
         </style>
     </head>
@@ -682,13 +794,30 @@ def index():
             <div id="arrivalsList" class="arrivals-box"></div>
         </div>
 
+        <div id="contactsOverlay" class="contacts-overlay">
+            <button id="backContactsBtn" class="close-contacts" onclick="closeContacts()">×</button>
+
+            <div class="contacts-header">
+                <div id="contactsTitle">Izaberi kontakt</div>
+                <div id="contactsSubtitle"></div>
+                <div id="callStatus"></div> </div>
+
+            <div id="contactsContent" class="contacts-box">
+                </div>
+            
+            <button id="endCallBtn" class="end-call-btn" style="display: none;" onclick="endCall()">Završi poziv</button>
+        </div>
+
         <div class="header">
             <div class="left-header">
                 <div id="d">""" + init_date + """</div>
                 <div id="bpLink" class="beograd-plus" onclick="openArrivals()">Beograd Plus (klikni da otvoriš informacije o dolascima)</div>
             </div>
 
-            <div id="g" class="greeting-right">""" + init_greeting + """</div>
+            <div class="right-header">
+                <div id="g" class="greeting-right">""" + init_greeting + """</div>
+                <div id="contactsLink" class="contacts-btn" onclick="openContacts()">Kontakti</div>
+            </div>
         </div>
 
         <div id="t" class="clock">""" + init_time + """</div>
@@ -704,9 +833,23 @@ def index():
             var soundEnabled = false;
             var lastMessageKey = "";
             var arrivalsTimer = null;
+            var callClockTimer = null;
+            var statusTimer1 = null;
+            var statusTimer2 = null;
 
             var stationPages = ["20867","20868", "20939", "22365", "22910"];
             var stationIndex = 0;
+
+            // OVDE MENJAŠ IMENA I BROJEVE TELEFONA PO ŽELJI
+            var mojiKontakti = [
+                { ime: "Lazar", broj: "+381652063576" },
+                { ime: "Danijela", broj: "+381638690634" },
+                { ime: "Slobodan", broj: "+381649843040" },
+                { ime: "Ljubica", broj: "+381641224729" },
+                { ime: "Aleksa", broj: "+381629666309" },
+                { ime: "Vasilije", broj: "+381652071186" },
+                { ime: "Slobodan službeni", broj: "+381648927794" }
+            ];
 
             function enableSound() {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -886,6 +1029,133 @@ def index():
                         err.textContent = "Greška pri učitavanju dolazaka.";
                         list.appendChild(err);
                     });
+            }
+
+            // --- LOGIKA ZA KONTAKTE, POZIV I ZADARMA INTEGRACIJU ---
+            function openContacts() {
+                document.getElementById('contactsOverlay').style.display = 'flex';
+                document.getElementById('backContactsBtn').style.display = 'block';
+                document.getElementById('endCallBtn').style.display = 'none';
+                
+                var title = document.getElementById('contactsTitle');
+                var subtitle = document.getElementById('contactsSubtitle');
+                var statusDiv = document.getElementById('callStatus');
+                var content = document.getElementById('contactsContent');
+                
+                title.className = "";
+                title.textContent = "Izaberi kontakt";
+                subtitle.textContent = "";
+                statusDiv.textContent = "";
+                
+                content.innerHTML = "";
+                
+                mojiKontakti.forEach(function(k) {
+                    var row = document.createElement('div');
+                    row.className = 'contact-row';
+                    row.onclick = function() { startCall(k.ime, k.broj); };
+                    
+                    var nameDiv = document.createElement('div');
+                    nameDiv.className = 'contact-name';
+                    nameDiv.textContent = k.ime;
+                    
+                    var phoneDiv = document.createElement('div');
+                    phoneDiv.className = 'contact-phone';
+                    phoneDiv.textContent = k.broj;
+                    
+                    row.appendChild(nameDiv);
+                    row.appendChild(phoneDiv);
+                    content.appendChild(row);
+                });
+            }
+
+            function closeContacts() {
+                document.getElementById('contactsOverlay').style.display = 'none';
+                clearCallTimers();
+            }
+
+            function clearCallTimers() {
+                if(callClockTimer) clearInterval(callClockTimer);
+                if(statusTimer1) clearTimeout(statusTimer1);
+                if(statusTimer2) clearTimeout(statusTimer2);
+            }
+
+            function startCall(ime, broj) {
+                document.getElementById('backContactsBtn').style.display = 'none';
+                document.getElementById('endCallBtn').style.display = 'block';
+                
+                var title = document.getElementById('contactsTitle');
+                var subtitle = document.getElementById('contactsSubtitle');
+                var statusDiv = document.getElementById('callStatus');
+                var content = document.getElementById('contactsContent');
+                
+                title.className = "call-active-title"; // Statičan stil bez blinkanja
+                title.textContent = "Poziv u toku";
+                
+                statusDiv.textContent = "Pozivanje...";
+                statusDiv.style.color = "#0f0"; // Zelena boja za aktivan status
+
+                // Simulacija promene faza statusa veze na ekranu
+                statusTimer1 = setTimeout(function() {
+                    statusDiv.textContent = "Zvoni...";
+                }, 3000);
+
+                statusTimer2 = setTimeout(function() {
+                    statusDiv.textContent = "Veza je uspostavljena";
+                }, 7000);
+                
+                function updateCallClock() {
+                    var sad = new Date();
+                    var hh = String(sad.getHours()).padStart(2, '0');
+                    var mm = String(sad.getMinutes()).padStart(2, '0');
+                    var ss = String(sad.getSeconds()).padStart(2, '0');
+                    var proslDate = document.getElementById('d').textContent;
+                    subtitle.textContent = proslDate + " | " + hh + ":" + mm + ":" + ss;
+                }
+                
+                updateCallClock();
+                if(callClockTimer) clearInterval(callClockTimer);
+                callClockTimer = setInterval(updateCallClock, 1000);
+                
+                content.innerHTML = `
+                    <div class="call-center-box">
+                        <div class="call-name">${ime}</div>
+                        <div class="call-number">${broj}</div>
+                    </div>
+                `;
+                
+                if (soundEnabled && audioCtx) {
+                    beep(800, audioCtx.currentTime, 0.15);
+                }
+
+                // POZIV KA FLASKU KOJI STVARNO OKIDA ZADARMA CALLBACK URL
+                fetch('/api/make-call', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone: broj })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.ok) {
+                        statusDiv.textContent = "Linija je zauzeta.";
+                        statusDiv.style.color = "#ff0303";
+                    }
+                })
+                .catch(() => {
+                    statusDiv.textContent = "Greška u pozivanju.";
+                    statusDiv.style.color = "#ff0303";
+                });
+            }
+
+            function endCall() {
+                clearCallTimers();
+                var statusDiv = document.getElementById('callStatus');
+                statusDiv.textContent = "Poziv završen";
+                statusDiv.style.color = "#ff0303";
+
+                // Kratka pauza pre vraćanja na listu da se vidi status
+                setTimeout(openContacts, 1200);
             }
 
             setInterval(checkMessage, 1000);
